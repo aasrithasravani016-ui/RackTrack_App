@@ -22,6 +22,11 @@ app.use(express.json());
 app.use('/uploads', express.static(uploadsDir));
 app.use('/outputs', express.static(outputsDir));
 
+const clientDist = path.join(PROJECT_ROOT, 'client', 'dist');
+if (fs.existsSync(clientDist)) {
+  app.use(express.static(clientDist));
+}
+
 // ── File upload ───────────────────────────────────────────────
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsDir),
@@ -54,7 +59,7 @@ function computeRackId(filePath) {
 // ── Python runner ─────────────────────────────────────────────
 function runPython(args) {
   return new Promise((resolve, reject) => {
-    const pythonPath = process.env.PYTHON_PATH || 'C:/Users/AasrithaSravaniBhami/AppData/Local/Programs/Python/Python310/python.exe';
+    const pythonPath = process.env.PYTHON_PATH || 'python3';
     const proc = spawn(pythonPath, args, { cwd: PROJECT_ROOT });
     let stdout = '', stderr = '';
     proc.stdout.on('data', d => { stdout += d.toString(); });
@@ -279,6 +284,12 @@ app.get('/api/racks', (req, res) => {
   } catch (err) {
     res.json({ racks: [] });
   }
+});
+
+app.get(/^\/(?!api|uploads|outputs).*/, (req, res, next) => {
+  const indexPath = path.join(clientDist, 'index.html');
+  if (fs.existsSync(indexPath)) return res.sendFile(indexPath);
+  next();
 });
 
 app.use((err, req, res, next) => {
